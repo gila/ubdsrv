@@ -24,7 +24,8 @@
               };
             });
         }); # deps
-    in {
+    in
+    {
       packages = forAllSystems (system:
         let pkgs = nixpkgsFor.${system};
         in {
@@ -33,6 +34,16 @@
             src = self;
             nativeBuildInputs = with pkgs; [ autoreconfHook pkg-config ];
             buildInputs = with pkgs; [ deps.${system}.muring gcc ];
+          };
+        });
+      devShells = forAllSystems (system:
+        let pkgs = nixpkgsFor.${system};
+        in {
+          default = pkgs.mkShell {
+            buildInputs = with pkgs; [ deps.${system}.muring gcc fio ];
+            shellHook = ''
+              ${pkgs.cowsay}/bin/cowsay development shell
+            '';
           };
         });
     };
