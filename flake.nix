@@ -10,7 +10,7 @@
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       nixpkgsFor = forAllSystems (system: import nixpkgs { inherit system; });
 
-      deps = forAllSystems (system:
+      packages = forAllSystems (system:
         let pkgs = nixpkgsFor.${system};
         in {
           muring = (with pkgs;
@@ -23,18 +23,31 @@
                 sha256 = "sha256-vN6lLb5kpgHTKDxwibJPS61sdelILETVtJE2BYgp79k=";
               };
             });
-        }); # deps
-    in
-    {
-      packages = forAllSystems (system:
-        let pkgs = nixpkgsFor.${system};
-        in {
-          default = pkgs.stdenv.mkDerivation {
+
+          ublk = pkgs.stdenv.mkDerivation {
             name = "ublk";
             src = self;
             nativeBuildInputs = with pkgs; [ autoreconfHook pkg-config ];
-            buildInputs = with pkgs; [ deps.${system}.muring gcc ];
+            buildInputs = with pkgs; [ packages.${system}.muring gcc ];
           };
+
+        }); # deps
+    in {
+      packages = forAllSystems (system:
+        let pkgs = nixpkgsFor.${system};
+        in {
+
+          # nix build .#dockerImage
+          # docker load < result
+
+          dockerImage = pkgs.dockerTools.buildLayeredImage {
+            name = "ublk-srv";
+            tag = "latest";
+            config = { Cmd = [ "${packages.${system}.ublk}/bin/ublk" ]; };
+          };
+
+          default = packages.${system}.ublk;
+
         });
       devShells = forAllSystems (system:
         let pkgs = nixpkgsFor.${system};
